@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/iam"
 
 	"github.com/openshift/cloud-credential-operator/pkg/apis"
@@ -169,7 +170,7 @@ func TestSecretAnnotatorReconcile(t *testing.T) {
 			rcc := &ReconcileCloudCredSecret{
 				Client: fakeClient,
 				logger: log.WithField("controller", "testController"),
-				AWSClientBuilder: func(accessKeyID, secretAccessKey []byte, infraName string) (ccaws.Client, error) {
+				AWSClientBuilder: func(creds *credentials.Value, infraName string) (ccaws.Client, error) {
 					return fakeAWSClient, nil
 				},
 			}

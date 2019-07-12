@@ -35,6 +35,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/iam"
 
 	corev1 "k8s.io/api/core/v1"
@@ -62,7 +63,7 @@ var _ actuatoriface.Actuator = (*AWSActuator)(nil)
 type AWSActuator struct {
 	Client           client.Client
 	Codec            *minterv1.ProviderCodec
-	AWSClientBuilder func(accessKeyID, secretAccessKey []byte, infraName string) (ccaws.Client, error)
+	AWSClientBuilder func(creds *credentials.Value, infraName string) (ccaws.Client, error)
 	Scheme           *runtime.Scheme
 }
 
@@ -158,7 +159,11 @@ func (a *AWSActuator) needsUpdate(ctx context.Context, cr *minterv1.CredentialsR
 
 	// Various checks for the kinds of reasons that would trigger a needed update
 	_, accessKey, secretKey := a.loadExistingSecret(cr)
-	awsClient, err := a.AWSClientBuilder([]byte(accessKey), []byte(secretKey), infraName)
+	creds := credentials.Value{
+		AccessKeyID:     accessKey,
+		SecretAccessKey: secretKey,
+	}
+	awsClient, err := a.AWSClientBuilder(&creds, infraName)
 	if err != nil {
 		return true, err
 	}
@@ -729,7 +734,11 @@ func (a *AWSActuator) buildRootAWSClient(cr *minterv1.CredentialsRequest, infraN
 	}
 
 	logger.Debug("creating root AWS client")
-	return a.AWSClientBuilder(accessKeyID, secretAccessKey, infraName)
+	creds := credentials.Value{
+		AccessKeyID:     string(accessKeyID),
+		SecretAccessKey: string(secretAccessKey),
+	}
+	return a.AWSClientBuilder(&creds, infraName)
 }
 
 // buildReadAWSCreds will return an AWS client using the the scaled down read only AWS creds
@@ -767,7 +776,11 @@ func (a *AWSActuator) buildReadAWSClient(cr *minterv1.CredentialsRequest, infraN
 	}
 
 	logger.Debug("creating read AWS client")
-	client, err := a.AWSClientBuilder(accessKeyID, secretAccessKey, infraName)
+	creds := credentials.Value{
+		AccessKeyID:     string(accessKeyID),
+		SecretAccessKey: string(secretAccessKey),
+	}
+	client, err := a.AWSClientBuilder(&creds, infraName)
 	if err != nil {
 		return nil, err
 	}
